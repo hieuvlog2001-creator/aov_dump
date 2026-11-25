@@ -25,3 +25,4 @@ IBrowserFile binary,metadata; bool busy,fast,dump=true; int slice; string baseHe
 async Task<byte[]> Read(IBrowserFile f){ using var s=f.OpenReadStream(512L*1024*1024); using var m=new MemoryStream(); await s.CopyToAsync(m); return m.ToArray(); }
 async Task Run(){ busy=true; log=""; MainForm.Sink=s=>log+=s+"\n"; try { var b=await Read(binary); var m=await Read(metadata); var result=new Engine().Run(b,m,options,dump,fast,slice,Convert.ToUInt64(baseHex,16),code,meta); using var stream=new MemoryStream(result); using var reference=new DotNetStreamReference(stream); await JS.InvokeVoidAsync("saveZip",reference); log+="Completed"; } catch(Exception e){log+=e.ToString();} finally {busy=false; MainForm.Sink=null;} }
 }
+<WorkerTest />
