@@ -1,0 +1,18 @@
+@inject IJSRuntime JS
+<h1>Il2CppDumper Web</h1><p>Local WebAssembly · Cloudflare</p>
+<label>IL2CPP binary <InputFile OnChange="e => binary=e.File" /></label>
+<label>Metadata <InputFile OnChange="e => metadata=e.File" /></label>
+<label><input type="checkbox" @bind="dump" /> dump.cs</label>
+<label><input type="checkbox" @bind="options.GenerateStruct" /> Struct / JSON</label>
+<label><input type="checkbox" @bind="options.GenerateDummyDll" /> Dummy DLL</label>
+<label><input type="checkbox" @bind="fast" /> Fast mode</label>
+<label>Mach-O slice index <input type="number" min="0" @bind="slice" /></label>
+<label>Dump base (hex) <input @bind="baseHex" /></label>
+<label>Code registration (hex) <input @bind="code" /></label>
+<label>Metadata registration (hex) <input @bind="meta" /></label>
+<button disabled="@(busy || binary==null || metadata==null)" @onclick="Run">Start dump</button><pre>@log</pre>
+@code {
+IBrowserFile binary,metadata; bool busy,fast,dump=true; int slice; string baseHex="0",code="",meta="",log=""; Config options=new();
+async Task<byte[]> Read(IBrowserFile f){ using var s=f.OpenReadStream(512L*1024*1024); using var m=new MemoryStream(); await s.CopyToAsync(m); return m.ToArray(); }
+async Task Run(){ busy=true; log=""; MainForm.Sink=s=>log+=s+"\n"; try { var b=await Read(binary); var m=await Read(metadata); var result=new Engine().Run(b,m,options,dump,fast,slice,Convert.ToUInt64(baseHex,16),code,meta); using var stream=new MemoryStream(result); using var reference=new DotNetStreamReference(stream); await JS.InvokeVoidAsync("saveZip",reference); log+="Completed"; } catch(Exception e){log+=e.ToString();} finally {busy=false; MainForm.Sink=null;} }
+}

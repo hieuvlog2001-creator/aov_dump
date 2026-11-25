@@ -1,0 +1,1 @@
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting; using Il2CppDumper; using System.Text; Encoding.RegisterProvider(CodePagesEncodingProvider.Instance); var b=WebAssemblyHostBuilder.CreateDefault(args); b.RootComponents.Add<App>("#app"); await b.Build().RunAsync();
