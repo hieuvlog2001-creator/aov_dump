@@ -1,0 +1,102 @@
+
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<h3>Web Worker Test</h3>
+
+<button @onclick="Start" disabled="@busy">
+    Start Background Task
+</button>
+
+<button @onclick="Cancel" disabled="@(!busy)">
+    Cancel
+</button>
+
+<p>Status: @status</p>
+
+<progress value="@progress" max="100"></progress>
+
+<p>@progress%</p>
+
+<button @onclick="Count">
+    Test UI: @counter
+</button>
+
+@code {
+    private bool busy;
+    private int progress;
+    private int counter;
+    private string status = "Ready";
+
+    private DotNetObjectReference<WorkerTest>? reference;
+
+    private async Task Start()
+    {
+        busy = true;
+        progress = 0;
+        status = "Processing...";
+
+        reference ??= DotNetObjectReference.Create(this);
+
+        try
+        {
+            await JS.InvokeVoidAsync(
+                "backgroundTask.start", reference);
+        }
+        catch (Exception ex)
+        {
+            busy = false;
+            status = ex.Message;
+        }
+    }
+
+    private async Task Cancel()
+    {
+        await JS.InvokeVoidAsync("backgroundTask.cancel");
+        busy = false;
+        status = "Cancelled";
+    }
+
+    private void Count()
+    {
+        counter++;
+    }
+
+    [JSInvokable]
+    public Task UpdateWorker(string type, string value)
+    {
+        return InvokeAsync(() =>
+        {
+            if (type == "progress")
+            {
+                progress = int.Parse(value);
+            }
+            else if (type == "complete")
+            {
+                progress = 100;
+                busy = false;
+                status = "Completed";
+            }
+            else if (type == "error")
+            {
+                busy = false;
+                status = "Error: " + value;
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("backgroundTask.cancel");
+        }
+        finally
+        {
+            reference?.Dispose();
+        }
+    }
+}
